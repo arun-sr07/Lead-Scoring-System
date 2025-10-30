@@ -33,17 +33,12 @@ lead-scoring-system/
 └── README.md            # This file
 ```
 
-## 📋 Prerequisites
-
-- **Node.js** v18+ ([Download](https://nodejs.org/))
-- **npm** (comes with Node.js)
-- **Groq API Key** ([Get one here](https://console.groq.com/))
 
 ## 🚀 Deployment Options
 
 Choose one of the following deployment methods:
 
-### Option 1: Docker Deployment (Recommended for Local)
+### Option 1: Docker Deployment 
 
 **Prerequisites:** Docker and Docker Compose installed
 
@@ -66,15 +61,11 @@ Choose one of the following deployment methods:
    docker-compose down
    ```
 
-**Benefits:**
-- Zero configuration needed
-- Isolated environment
-- Easy cleanup
-- Persistent data in `./data` directory
+
 
 ---
 
-### Option 2: Vercel Cloud Deployment (FREE Tier)
+### Option 2: Vercel Cloud Deployment 
 
 **Prerequisites:** 
 - Vercel account ([Sign up free](https://vercel.com/signup))
@@ -125,14 +116,8 @@ Choose one of the following deployment methods:
    vercel --prod
    ```
 
-**Your app is now live!** 🎉
+**Your app is now live!** 
 
-**Vercel FREE tier includes:**
-- 100GB bandwidth/month
-- Serverless functions
-- 256MB Postgres database
-- Automatic HTTPS
-- Global CDN
 
 ---
 
@@ -423,73 +408,7 @@ Check if the server is running.
 **cURL Example:**
 ```bash
 curl http://localhost:3001/health
-```
 
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Backend server port | `3001` |
-| `GROQ_API_KEY` | Your Groq API key | Required |
-| `GROQ_MODEL` | Groq model to use | `llama-3.1-8b-instant` |
-| `DATABASE_PATH` | SQLite database file path | `./data.db` |
-
-### Available Groq Models
-
-- `llama-3.1-8b-instant` (recommended - fast & accurate)
-- `llama-3.1-70b-versatile` (more powerful, slower)
-- `mixtral-8x7b-32768` (alternative option)
-
-Change the model in `.env`:
-```env
-GROQ_MODEL=llama-3.1-70b-versatile
-```
-
-## 📊 Database Schema
-
-### `offers` table
-```sql
-id INTEGER PRIMARY KEY
-name TEXT
-value_props TEXT (JSON array)
-ideal_use_cases TEXT (JSON array)
-created_at DATETIME
-```
-
-### `leads` table
-```sql
-id INTEGER PRIMARY KEY
-name TEXT
-role TEXT
-company TEXT
-industry TEXT
-location TEXT
-linkedin_bio TEXT
-uploaded_at DATETIME
-```
-
-### `results` table
-```sql
-id INTEGER PRIMARY KEY
-lead_id INTEGER (FK -> leads)
-offer_id INTEGER (FK -> offers)
-intent TEXT (High/Medium/Low)
-score INTEGER (0-100)
-reasoning TEXT
-created_at DATETIME
-```
-
-## 🧪 Complete Workflow Example
-
-### 1. Start Backend
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Edit .env with your Groq API key
-npm start
 ```
 
 ### 2. Create an Offer (cURL)
@@ -523,91 +442,3 @@ curl http://localhost:3001/results
 ```bash
 curl http://localhost:3001/results/export -o my_scored_leads.csv
 ```
-
-## 🐛 Troubleshooting
-
-### Backend won't start
-- **Check Node version:** `node --version` (should be 18+)
-- **Check port availability:** Make sure port 3001 is not in use
-- **Check Groq API key:** Verify your key is correct in `.env`
-
-### "GROQ_API_KEY is not configured"
-- Ensure `.env` file exists in `/backend` directory
-- Verify `GROQ_API_KEY=gsk_...` is set correctly
-- Restart the server after editing `.env`
-
-### Database errors
-- Delete `data.db` file and restart server to recreate tables
-- Check file permissions in `/backend` directory
-
-### CSV upload fails
-- Ensure CSV has correct headers: `name,role,company,industry,location,linkedin_bio`
-- Check file size (should be reasonable, < 10MB)
-- Verify file encoding is UTF-8
-
-### AI scoring returns "Medium" for all leads
-- Check Groq API key is valid
-- Verify internet connection
-- Check Groq dashboard for rate limits/usage
-- Try a different model in `.env`
-
-## 🏗️ Architecture Comparison
-
-| Feature | Docker/Local | Vercel Cloud |
-|---------|-------------|--------------|
-| **Database** | SQLite (file-based) | Postgres (cloud) |
-| **Backend** | Express server | Serverless functions |
-| **File Storage** | Local filesystem | Temporary (use external for production) |
-| **Scaling** | Single instance | Auto-scales |
-| **Cost** | Free (your machine) | Free tier available |
-| **Best For** | Development, testing | Production, demos |
-
-## 📦 Dependencies
-
-### Backend (Docker/Local)
-- `express` - Web framework
-- `cors` - CORS middleware
-- `multer` - File upload handling
-- `csv-parse` - CSV parsing
-- `better-sqlite3` - SQLite database
-- `openai` - Groq API client (OpenAI-compatible)
-- `dotenv` - Environment variables
-
-### Vercel Serverless
-- `@vercel/postgres` - Managed Postgres
-- `formidable` - File upload handling
-- `csv-parse` - CSV parsing
-
-### Frontend
-- `react` - UI framework
-- `vite` - Build tool
-- `tailwindcss` - Styling
-
-## 🔐 Security Notes
-
-- **Never commit `.env` file** to version control
-- Keep your Groq API key private
-- In production, add rate limiting and authentication
-- Validate all CSV uploads for malicious content
-- Use HTTPS in production
-
-## 📈 Performance Tips
-
-- For large CSVs (>1000 leads), scoring may take time due to sequential AI calls
-- Consider batching or caching for production use
-- SQLite is suitable for <100k records; migrate to PostgreSQL for larger datasets
-- Groq rate limits: Check your plan at https://console.groq.com/
-
-## 🤝 Support
-
-- **Groq Docs:** https://console.groq.com/docs
-- **Express Docs:** https://expressjs.com/
-- **SQLite Docs:** https://www.sqlite.org/docs.html
-
-## 📄 License
-
-MIT
-
----
-
-**Built with Node.js + Express + SQLite + Groq Llama + React**
