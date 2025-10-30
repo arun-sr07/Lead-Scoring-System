@@ -67,10 +67,7 @@ Choose one of the following deployment methods:
 
 ### Option 2: Vercel Cloud Deployment 
 
-**Prerequisites:** 
-- Vercel account ([Sign up free](https://vercel.com/signup))
-- Groq API key
-
+-Link lead-scoring-system1-hpun86ufn-aruns-projects-7268cc34.vercel.app
 **Step-by-step:**
 
 1. **Install Vercel CLI:**
@@ -102,13 +99,13 @@ Choose one of the following deployment methods:
 
 6. **Initialize database (one-time):**
    ```bash
-   curl -X POST https://your-project.vercel.app/api/init-db
+   curl -X POST https://lead-scoring-system1-hpun86ufn-aruns-projects-7268cc34.vercel.app/api/init-db
    ```
 
 7. **Update frontend API URL:**
    Edit `src/pages/Index.tsx`:
    ```typescript
-   const API_BASE = 'https://your-project.vercel.app/api';
+   const API_BASE = 'https://lead-scoring-system1-hpun86ufn-aruns-projects-7268cc34.vercel.app/api';
    ```
 
 8. **Redeploy:**
