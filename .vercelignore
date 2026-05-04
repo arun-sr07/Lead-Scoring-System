@@ -1,0 +1,6 @@
+backend/
+data/
+sample_leads.csv
+docker-compose.yml
+Dockerfile
+.dockerignore
