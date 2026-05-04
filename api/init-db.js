@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Create tables
+    // Create tables (PostgreSQL syntax — no inline FOREIGN KEY, use REFERENCES)
     await sql`
       CREATE TABLE IF NOT EXISTS offers (
         id SERIAL PRIMARY KEY,
@@ -33,14 +33,12 @@ export default async function handler(req, res) {
     await sql`
       CREATE TABLE IF NOT EXISTS results (
         id SERIAL PRIMARY KEY,
-        lead_id INTEGER NOT NULL,
-        offer_id INTEGER NOT NULL,
+        lead_id INTEGER NOT NULL REFERENCES leads(id),
+        offer_id INTEGER NOT NULL REFERENCES offers(id),
         intent TEXT NOT NULL,
         score INTEGER NOT NULL,
         reasoning TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (lead_id) REFERENCES leads(id),
-        FOREIGN KEY (offer_id) REFERENCES offers(id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
 

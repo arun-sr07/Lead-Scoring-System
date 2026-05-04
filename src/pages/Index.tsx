@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = '/api';
 
 export default function Index() {
   const { toast } = useToast();

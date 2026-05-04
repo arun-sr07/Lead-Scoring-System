@@ -23,16 +23,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const form = formidable({ multiples: false });
-    
+    // Use /tmp as the upload directory — the only writable dir in Vercel serverless
+    const form = formidable({ multiples: false, uploadDir: '/tmp', keepExtensions: true });
+
     const [fields, files] = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
         if (err) reject(err);
-        resolve([fields, files]);
+        else resolve([fields, files]);
       });
     });
 
-    const file = files.file;
+    // formidable v3 returns arrays for each field
+    const fileRaw = files.file;
+    const file = Array.isArray(fileRaw) ? fileRaw[0] : fileRaw;
+
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -60,8 +64,8 @@ export default async function handler(req, res) {
       count++;
     }
 
-    // Clean up
-    fs.unlinkSync(file.filepath);
+    // Clean up temp file
+    try { fs.unlinkSync(file.filepath); } catch (_) {}
 
     res.json({ message: 'Leads uploaded successfully', count });
   } catch (error) {
