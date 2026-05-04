@@ -1,8 +1,7 @@
-import { sql } from '@vercel/postgres';
+import { createPool } from '@vercel/postgres';
 
 function calculateRuleScore(lead) {
   let score = 0;
-
   const roleLower = (lead.role || '').toLowerCase();
   if (roleLower.includes('ceo') || roleLower.includes('cto') || roleLower.includes('founder') || 
       roleLower.includes('director') || roleLower.includes('vp') || roleLower.includes('head')) {
@@ -10,29 +9,25 @@ function calculateRuleScore(lead) {
   } else if (roleLower.includes('manager') || roleLower.includes('lead')) {
     score += 10;
   }
-
   const industryLower = (lead.industry || '').toLowerCase();
   if (industryLower.includes('tech') || industryLower.includes('software') || industryLower.includes('saas')) {
     score += 20;
   } else if (industryLower.includes('finance') || industryLower.includes('healthcare')) {
     score += 10;
   }
-
   const fields = [lead.name, lead.role, lead.company, lead.industry, lead.location, lead.linkedin_bio];
   if (fields.every(f => f && f.trim())) {
     score += 10;
   }
-
   return Math.min(score, 50);
 }
 
 async function calculateAIScore(lead, offer) {
   try {
     const prompt = `You are a B2B lead qualification expert. Analyze this lead against the offer.
-
 Offer: ${offer.name}
-Value Props: ${JSON.parse(offer.value_props).join(', ')}
-Ideal Use Cases: ${JSON.parse(offer.ideal_use_cases).join(', ')}
+Value Props: ${offer.value_props}
+Ideal Use Cases: ${offer.ideal_use_cases}
 
 Lead:
 - Name: ${lead.name}
@@ -89,50 +84,52 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  const pool = createPool({ connectionString: process.env.POSTGRES_URL });
 
   try {
-    const leadsResult = await sql`SELECT * FROM leads`;
+    const leadsResult = await pool.query('SELECT * FROM leads');
     const leads = leadsResult.rows;
 
-    const offerResult = await sql`SELECT * FROM offers ORDER BY id DESC LIMIT 1`;
+    const offerResult = await pool.query('SELECT * FROM offers ORDER BY id DESC LIMIT 1');
     const offer = offerResult.rows[0];
 
-    if (!offer) {
-      return res.status(400).json({ error: 'No offer found. Please create an offer first.' });
-    }
-
-    if (leads.length === 0) {
-      return res.status(400).json({ error: 'No leads found. Please upload leads first.' });
-    }
+    if (!offer) return res.status(400).json({ error: 'No offer found. Please create an offer first.' });
+    if (leads.length === 0) return res.status(400).json({ error: 'No leads found. Please upload leads first.' });
 
     const results = [];
+    const client = await pool.connect();
 
-    for (const lead of leads) {
-      const ruleScore = calculateRuleScore(lead);
-      const { intent, reasoning, aiPoints } = await calculateAIScore(lead, offer);
-      const finalScore = Math.min(ruleScore + aiPoints, 100);
+    try {
+      await client.query('BEGIN');
+      for (const lead of leads) {
+        const ruleScore = calculateRuleScore(lead);
+        const { intent, reasoning, aiPoints } = await calculateAIScore(lead, offer);
+        const finalScore = Math.min(ruleScore + aiPoints, 100);
 
-      await sql`
-        INSERT INTO results (lead_id, offer_id, intent, score, reasoning)
-        VALUES (${lead.id}, ${offer.id}, ${intent}, ${finalScore}, ${reasoning})
-      `;
+        await client.query(
+          'INSERT INTO results (lead_id, offer_id, intent, score, reasoning) VALUES ($1, $2, $3, $4, $5)',
+          [lead.id, offer.id, intent, finalScore, reasoning]
+        );
 
-      results.push({
-        lead_id: lead.id,
-        name: lead.name,
-        role: lead.role,
-        company: lead.company,
-        intent,
-        score: finalScore,
-        reasoning
-      });
+        results.push({
+          lead_id: lead.id,
+          name: lead.name,
+          role: lead.role,
+          company: lead.company,
+          intent,
+          score: finalScore,
+          reasoning
+        });
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
     }
 
     res.json({ message: 'Scoring completed', count: results.length, results });

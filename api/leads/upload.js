@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { createPool } from '@vercel/postgres';
 import formidable from 'formidable';
 import { parse } from 'csv-parse/sync';
 import fs from 'fs';
@@ -22,8 +22,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Create a pool manually to be more resilient to connection string formats
+  const pool = createPool({
+    connectionString: process.env.POSTGRES_URL
+  });
+
   try {
-    // Use /tmp as the upload directory — the only writable dir in Vercel serverless
     const form = formidable({ multiples: false, uploadDir: '/tmp', keepExtensions: true });
 
     const [fields, files] = await new Promise((resolve, reject) => {
@@ -33,7 +37,6 @@ export default async function handler(req, res) {
       });
     });
 
-    // formidable v3 returns arrays for each field
     const fileRaw = files.file;
     const file = Array.isArray(fileRaw) ? fileRaw[0] : fileRaw;
 
@@ -49,22 +52,33 @@ export default async function handler(req, res) {
     });
 
     let count = 0;
-    for (const record of records) {
-      await sql`
-        INSERT INTO leads (name, role, company, industry, location, linkedin_bio)
-        VALUES (
-          ${record.name || ''},
-          ${record.role || ''},
-          ${record.company || ''},
-          ${record.industry || ''},
-          ${record.location || ''},
-          ${record.linkedin_bio || ''}
-        )
-      `;
-      count++;
+    // Use a single client from the pool for the entire loop for better performance
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      for (const record of records) {
+        await client.query(
+          'INSERT INTO leads (name, role, company, industry, location, linkedin_bio) VALUES ($1, $2, $3, $4, $5, $6)',
+          [
+            record.name || '',
+            record.role || '',
+            record.company || '',
+            record.industry || '',
+            record.location || '',
+            record.linkedin_bio || ''
+          ]
+        );
+        count++;
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
     }
 
-    // Clean up temp file
     try { fs.unlinkSync(file.filepath); } catch (_) {}
 
     res.json({ message: 'Leads uploaded successfully', count });

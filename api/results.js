@@ -1,20 +1,17 @@
-import { sql } from '@vercel/postgres';
+import { createPool } from '@vercel/postgres';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  const pool = createPool({ connectionString: process.env.POSTGRES_URL });
 
   try {
-    const result = await sql`
+    const result = await pool.query(`
       SELECT 
         r.id,
         l.name,
@@ -27,8 +24,7 @@ export default async function handler(req, res) {
       FROM results r
       JOIN leads l ON r.lead_id = l.id
       ORDER BY r.score DESC
-    `;
-
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching results:', error);
