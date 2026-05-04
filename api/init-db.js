@@ -1,7 +1,8 @@
 import { createPool } from '@vercel/postgres';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
+  // Allow GET so user can just visit the URL in browser
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -10,6 +11,7 @@ export default async function handler(req, res) {
   try {
     const client = await pool.connect();
     try {
+      // Create tables
       await client.query(`
         CREATE TABLE IF NOT EXISTS offers (
           id SERIAL PRIMARY KEY,
@@ -48,7 +50,7 @@ export default async function handler(req, res) {
       client.release();
     }
 
-    res.json({ message: 'Database initialized successfully' });
+    res.json({ message: 'Database initialized successfully! You can now upload leads.' });
   } catch (error) {
     console.error('Database initialization error:', error);
     res.status(500).json({ error: error.message });
